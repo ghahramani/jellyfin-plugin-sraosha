@@ -29,6 +29,8 @@ else
     echo "Target: .NET 8.0 (Jellyfin 10.9 / 10.10)"
     if [ -x "$HOME/.dotnet/dotnet" ]; then
         "$HOME/.dotnet/dotnet" build "${SCRIPT_DIR}/Jellyfin.Plugin.Sraosha" -c Release
+    elif [ -x "/tmp/dotnet-sdk/dotnet" ]; then
+        DOTNET_ROOT="/tmp/dotnet-sdk" /tmp/dotnet-sdk/dotnet build "${SCRIPT_DIR}/Jellyfin.Plugin.Sraosha" -c Release
     elif dotnet --list-sdks 2>/dev/null | grep -q '8\.'; then
         dotnet build "${SCRIPT_DIR}/Jellyfin.Plugin.Sraosha" -c Release
     elif command -v docker &>/dev/null; then

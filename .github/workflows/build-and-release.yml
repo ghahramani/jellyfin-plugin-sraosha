@@ -1,0 +1,88 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build & Package Plugin
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore Jellyfin.Plugin.Sraosha/Jellyfin.Plugin.Sraosha.csproj
+
+      - name: Build plugin (Release)
+        run: dotnet build Jellyfin.Plugin.Sraosha/Jellyfin.Plugin.Sraosha.csproj -c Release --no-restore
+
+      - name: Publish plugin
+        run: dotnet publish Jellyfin.Plugin.Sraosha/Jellyfin.Plugin.Sraosha.csproj -c Release -o ./publish --no-build
+
+      - name: Package distribution ZIP
+        id: package
+        run: |
+          mkdir -p dist
+          PKG_DIR=$(mktemp -d)
+          cp ./publish/Jellyfin.Plugin.Sraosha.dll "$PKG_DIR/"
+          cp Jellyfin.Plugin.Sraosha/meta.json "$PKG_DIR/"
+          cp Jellyfin.Plugin.Sraosha/icon.png "$PKG_DIR/"
+
+          ZIP_NAME="Jellyfin.Plugin.Sraosha_1.0.0.0.zip"
+          (cd "$PKG_DIR" && zip -9 -r "$GITHUB_WORKSPACE/dist/$ZIP_NAME" ./*)
+          rm -rf "$PKG_DIR"
+
+          MD5_SUM=$(md5sum "dist/$ZIP_NAME" | awk '{print $1}')
+          SHA256_SUM=$(sha256sum "dist/$ZIP_NAME" | awk '{print $1}')
+
+          echo "zip_name=$ZIP_NAME" >> $GITHUB_OUTPUT
+          echo "md5=$MD5_SUM" >> $GITHUB_OUTPUT
+          echo "sha256=$SHA256_SUM" >> $GITHUB_OUTPUT
+
+          echo "::notice title=Artifact Packaged::Archive: $ZIP_NAME | MD5: $MD5_SUM"
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.package.outputs.zip_name }}
+          path: dist/${{ steps.package.outputs.zip_name }}
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/${{ steps.package.outputs.zip_name }}
+            manifest.json
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          body: |
+            ### 🛡️ Sraosha - The Sleepless Sentinel for Jellyfin
+            
+            **Checksums:**
+            - **MD5:** `${{ steps.package.outputs.md5 }}`
+            - **SHA256:** `${{ steps.package.outputs.sha256 }}`
+            
+            #### Jellyfin Plugin Repository URL:
+            ```text
+            https://raw.githubusercontent.com/${{ github.repository }}/main/manifest.json
+            ```
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

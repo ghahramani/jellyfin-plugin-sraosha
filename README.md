@@ -1,139 +1,135 @@
-# 🛡️ Sraosha (`jellyfin-plugin-sraosha`)
+# 🛡️ Sraosha (سروش)
 
-> *"In Zoroastrian myth, Sraosha is the divine, sleepless sentinel who never rests—patrolling creation with his staff raised, guarding against negligence, chaos, and stalled quests while the world sleeps."*
+### *The Sleepless Sentinel for Jellyfin*
 
-**Sraosha** is a native Jellyfin plugin that acts as an automated guardian for your media pipeline. It inspects **Jellyseerr** / **Overseerr** for requests that are stalled in processing (e.g. downloads manually purged from qBittorrent, stuck indexers, or forgotten items), verifies whether files are actually missing in **Radarr** and **Sonarr**, and automatically resurrects the download queue.
+[![GitHub Release](https://img.shields.io/github/v/release/ghahramani/jellyfin-plugin-sraosha?style=flat-square&color=blue)](https://github.com/ghahramani/jellyfin-plugin-sraosha/releases)
+[![Build and Release](https://img.shields.io/github/actions/workflow/status/ghahramani/jellyfin-plugin-sraosha/build-and-release.yml?style=flat-square)](https://github.com/ghahramani/jellyfin-plugin-sraosha/actions)
+[![Jellyfin](https://img.shields.io/badge/Jellyfin-10.9%2B%20%7C%2010.10%2B-purple?style=flat-square)](https://jellyfin.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
 
----
-
-## ⚡ The Problem It Solves
-
-When running an automated *arr media stack:
-1. A user requests a movie or series in **Jellyseerr**.
-2. A download is started, but later gets manually removed from your download client (e.g. qBittorrent / SABnzbd), corrupted, or rejected by indexers.
-3. Radarr and Sonarr lose track of the search or leave the item unmonitored.
-4. Jellyseerr remains indefinitely in the **"Processing"** state—it never retries by itself, and the media is never delivered.
-
-**Sraosha solves this silently and automatically.**
+<p align="center">
+  <img src="Jellyfin.Plugin.Sraosha/icon.png" alt="Sraosha Icon" width="160" />
+</p>
 
 ---
 
-## 🌟 Key Features
+## 📖 The Myth behind the Name
 
-- 🕒 **Native Scheduled Task (`IScheduledTask`)**: Integrates directly into Jellyfin's task scheduler (default: runs every 6 hours; customizable schedule via Jellyfin Dashboard).
-- 🎬 **Multi-Instance Radarr & Sonarr**: Fully supports multiple instances (e.g., standard 1080p, 4K HDR, and Anime instances).
-- ⏱️ **Configurable Stale Threshold**: Avoids false triggers by ignoring freshly submitted requests (default: 2 hours).
-- 🧭 **Trakt Watch History Guard**: If you already watched a movie or series and intentionally deleted it to save space, Sraosha skips re-downloading it.
-- 🧪 **Dry-Run Mode**: Safely test and preview exactly what would be searched without sending command calls to your downloaders.
-- 🔔 **Discord & Webhook Alerts**: Receive clean notifications with item titles whenever downloads are revived.
-- 🎛️ **Integrated Dashboard UI**: Embedded configuration page with connection test buttons for every instance and an immediate **"Run Scan Now"** trigger.
+In ancient Persian/Zoroastrian tradition, **Sraosha (سروش)** is the divine herald and sleepless guardian of the realm. Sraosha **never sleeps**—three times each night, he patrols the earth with his celestial staff raised, protecting creation against chaos, negligence, and darkness while everyone else rests.
+
+In your media stack, Sraosha plays the exact same role: whenever a requested download stalls at 0%, gets accidentally deleted from your torrent client, or slips through the cracks between **Jellyseerr**, **Radarr**, and **Sonarr**, Sraosha awakens the pipeline and restores what was lost.
+
+---
+
+## ⚡ Features
+
+- 🔍 **Automated Jellyseerr Watchdog**: Continuously tracks requests remaining in `Processing` state beyond your chosen time threshold (default: 2 hours).
+- 🎬 **Radarr Movie Reviver**:
+  - Checks if requested movies actually have files on disk in Radarr.
+  - Ensures the movie is set to `Monitored`.
+  - Automatically triggers `MoviesSearch` to re-grab the release.
+- 📺 **Sonarr Episode Patrol**:
+  - Validates series status and inspects specifically requested seasons.
+  - Detects aired episodes with missing files on disk.
+  - Ensures monitoring and sends batched `EpisodeSearch` commands.
+- 👁️ **Trakt Watch History Sync (Optional)**:
+  - Prevents re-downloading media you've already watched and intentionally purged from your disk.
+- 🔀 **Multi-Instance Architecture**:
+  - Configure multiple Radarr and Sonarr instances (e.g. standard 1080p, 4K HDR, or Anime).
+- 🧪 **Dry-Run Mode & Live Health Checks**:
+  - Test API connections for all services directly within the Jellyfin Dashboard.
+  - Run in Dry-Run mode to verify exactly what Sraosha would search before modifying your library.
+- 🔔 **Instant Webhook Notifications**:
+  - Sends clean alert summaries to **Discord**, **ntfy**, or **Slack** whenever missing media is revived.
+- ⏱️ **Native Scheduled Task**:
+  - Integrates seamlessly with Jellyfin's `IScheduledTask` system (Dashboard → Scheduled Tasks). Customize triggers or click **Start** on-demand.
 
 ---
 
 ## 🔄 How It Works
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                    Jellyfin Server (Sraosha)                 │
-│                                                              │
-│  Scheduled Task (Every 6h) or Manual "Run Scan Now"          │
-└───────────────┬───────────────────────────────┬──────────────┘
-                │ 1. Query Processing Requests   │ 2. (Optional) Check Watch History
-                ▼                               ▼
-       ┌─────────────────┐             ┌─────────────────┐
-       │   Jellyseerr    │             │      Trakt      │
-       └────────┬────────┘             └─────────────────┘
-                │
-                │ Filter by Age (e.g. > 2 hours)
-                ▼
-        ┌───────────────┴───────────────┐
-        │                               │
-        ▼ Movies                        ▼ TV Series
-┌──────────────────────┐        ┌──────────────────────┐
-│   Radarr Instance(s) │        │   Sonarr Instance(s) │
-├──────────────────────┤        ├──────────────────────┤
-│ 1. Match TMDb ID     │        │ 1. Match TVDb ID     │
-│ 2. Check HasFile     │        │ 2. Find missing eps  │
-│ 3. Ensure Monitored  │        │ 3. Filter watched    │
-│ 4. Trigger Search    │        │ 4. Batch Search      │
-└──────────────────────┘        └──────────────────────┘
+```mermaid
+flowchart TD
+    A["⏱️ Sraosha Scheduled Task"] --> B["1. Query Jellyseerr API"]
+    B --> C{"Stalled > StaleHours?"}
+    C -- "No" --> D["✅ All clear!"]
+    C -- "Yes" --> E["2. Check Trakt (Optional)"]
+    E --> F{"Already Watched?"}
+    F -- "Yes" --> G["⏭️ Skip download"]
+    F -- "No" --> H["3. Cross-reference Radarr / Sonarr"]
+    H --> I{"File on Disk?"}
+    I -- "Yes" --> J["⏭️ Skip"]
+    I -- "No" --> K["4. Ensure Monitored & Trigger Search"]
+    K --> L["5. Send Webhook Notification"]
 ```
 
 ---
 
-## 📦 Installation
+## 🚀 Installation
 
-### Method A: Plugin Repository (Recommended)
+### Option 1: Plugin Repository (Recommended)
 
-1. In Jellyfin, go to **Dashboard** → **Plugins** → **Repositories** tab.
-2. Click **+ Add** and paste the manifest URL:
-   ```
-   https://raw.githubusercontent.com/ghahramani/jellyfin-plugin-sraosha/main/manifest.json
-   ```
-3. Set the name to **Sraosha** and save.
-4. Switch to the **Catalog** tab, locate **Sraosha**, and click **Install**.
-5. Restart your Jellyfin server.
+1. Open your **Jellyfin Dashboard**.
+2. Navigate to **Plugins** → **Repositories**.
+3. Click the **+** (Add) button and enter:
+   - **Repository Name:** `Sraosha Repository`
+   - **Repository URL:**
+     ```text
+     https://raw.githubusercontent.com/ghahramani/jellyfin-plugin-sraosha/main/manifest.json
+     ```
+4. Save, then switch to the **Catalog** tab.
+5. Find **Sraosha** under the *General* category and click **Install**.
+6. Restart your Jellyfin server.
 
 ---
 
-### Method B: Manual Download
+### Option 2: Manual Installation
 
-1. Download the latest `Jellyfin.Plugin.Sraosha_x.x.x.x.zip` from the [Releases](https://github.com/ghahramani/jellyfin-plugin-sraosha/releases) page.
-2. Extract the archive into your Jellyfin plugins directory:
+1. Download the latest `Jellyfin.Plugin.Sraosha_1.0.0.0.zip` from [Releases](https://github.com/ghahramani/jellyfin-plugin-sraosha/releases).
+2. Extract the archive into your Jellyfin `plugins` directory under a folder named `Sraosha_1.0.0.0`:
    ```bash
-   # Linux / Docker example:
+   # Example path on Linux / Docker
    mkdir -p /config/plugins/Sraosha_1.0.0.0
    unzip Jellyfin.Plugin.Sraosha_1.0.0.0.zip -d /config/plugins/Sraosha_1.0.0.0/
    ```
-3. Restart your Jellyfin container or service.
-
----
-
-### Method C: Local Build
-
-```bash
-git clone https://github.com/ghahramani/jellyfin-plugin-sraosha.git
-cd jellyfin-plugin-sraosha
-
-# Build and generate ZIP in dist/
-./build.sh
-
-# Or build and automatically install into local Jellyfin test instance:
-./build.sh --install
-```
+3. Restart Jellyfin.
 
 ---
 
 ## ⚙️ Configuration
 
-Navigate to **Jellyfin Dashboard** → **Plugins** → **Sraosha**:
+Once installed, navigate to **Dashboard** → **Plugins** → **Sraosha**:
 
-| Setting | Description | Default |
+| Setting | Default | Description |
 |---|---|---|
-| **Stale Threshold (Hours)** | Minimum age before a processing request is considered stalled | `2` |
-| **Dry Run Mode** | Logs what would be searched without triggering real downloads | `false` |
-| **Jellyseerr URL & API Key** | URL (`http://192.168.1.10:5055`) and API Key from Settings → General | *Required* |
-| **Radarr Instances** | Add one or more Radarr URLs and API keys | *At least one* |
-| **Sonarr Instances** | Add one or more Sonarr URLs and API keys | *At least one* |
-| **Trakt Integration** | Optional Trakt Client ID and username to skip already-watched media | `Disabled` |
-| **Webhook URL** | Optional Discord/ntfy/Slack webhook for summary alerts | `Disabled` |
+| **Jellyseerr URL** | `http://localhost:5055` | The base URL of your Jellyseerr/Overseerr instance. |
+| **Jellyseerr API Key** | `—` | API key from Jellyseerr Settings → General → API Key. |
+| **Stale Threshold** | `2 hours` | Requests older than this in `processing` state are inspected. |
+| **Dry-Run Mode** | `Disabled` | When enabled, logs actions without firing search commands. |
+| **Radarr Instances** | `1 instance` | Add multiple Radarr servers (URL, API Key, Enabled toggle). |
+| **Sonarr Instances** | `1 instance` | Add multiple Sonarr servers (URL, API Key, Enabled toggle). |
+| **Trakt Integration** | `Disabled` | Skips re-downloading media already marked as watched in Trakt. |
+| **Webhook URL** | `—` | Discord / ntfy webhook URL for scan alerts. |
 
 ---
 
-## 🛠️ Building & Compatibility
+## 🛠️ Building from Source
 
-| Component | Version |
-|---|---|
-| **Jellyfin Target ABI** | `10.9.x`, `10.10.x`, `10.11.x`, `12.0.x` |
-| **Target Framework** | .NET 8.0 (standard) / .NET 10.0 (Jellyfin 12 preview) |
+Requirements:
+- [.NET 8.0 SDK](https://dotnet.microsoft.com/download) or Docker
 
 ```bash
-# Standard .NET 8 build
-dotnet build Jellyfin.Plugin.Sraosha -c Release
+git clone https://github.com/ghahramani/jellyfin-plugin-sraosha.git
+cd jellyfin-plugin-sraosha
 
-# Preview .NET 10 build (Jellyfin 12 preview)
-docker run --rm -v $(pwd):/src -w /src/Jellyfin.Plugin.Sraosha mcr.microsoft.com/dotnet/sdk:10.0-preview dotnet build -c Release -p:NET10=true
+# Build release and package zip
+./build.sh
+
+# Or build and install directly to local Jellyfin container
+./build.sh --install
 ```
+
+The resulting zip package and MD5 hash will be generated under `./dist/`.
 
 ---
 
