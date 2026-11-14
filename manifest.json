@@ -11,7 +11,7 @@
       {
         "version": "1.0.0.0",
         "changelog": "Initial release: Automated detection of stalled requests in Jellyseerr, multi-instance Radarr/Sonarr support, Trakt watch history integration, Webhook notifications, and native scheduled task & configuration page.",
-        "targetAbi": "10.10.0.0",
+        "targetAbi": "12.0.0.0",
         "sourceUrl": "https://github.com/ghahramani/jellyfin-plugin-sraosha/releases/download/v1.0.0.0/Jellyfin.Plugin.Sraosha_1.0.0.0.zip",
         "checksum": "d2ed3437678eeea7203a0ec5a5faaea0",
         "timestamp": "2026-11-14T04:00:00Z"
@@ -19,7 +19,7 @@
       {
         "version": "1.0.0.0",
         "changelog": "Initial release: Automated detection of stalled requests in Jellyseerr, multi-instance Radarr/Sonarr support, Trakt watch history integration, Webhook notifications, and native scheduled task & configuration page.",
-        "targetAbi": "10.9.0.0",
+        "targetAbi": "10.10.0.0",
         "sourceUrl": "https://github.com/ghahramani/jellyfin-plugin-sraosha/releases/download/v1.0.0.0/Jellyfin.Plugin.Sraosha_1.0.0.0.zip",
         "checksum": "d2ed3437678eeea7203a0ec5a5faaea0",
         "timestamp": "2026-11-14T04:00:00Z"

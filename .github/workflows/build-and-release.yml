@@ -27,16 +27,17 @@ jobs:
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: '10.0.x'
+          dotnet-quality: 'preview'
 
       - name: Restore dependencies
-        run: dotnet restore Jellyfin.Plugin.Sraosha/Jellyfin.Plugin.Sraosha.csproj
+        run: dotnet restore Jellyfin.Plugin.Sraosha/Jellyfin.Plugin.Sraosha.csproj /p:NET10=true
 
       - name: Build plugin (Release)
-        run: dotnet build Jellyfin.Plugin.Sraosha/Jellyfin.Plugin.Sraosha.csproj -c Release --no-restore
+        run: dotnet build Jellyfin.Plugin.Sraosha/Jellyfin.Plugin.Sraosha.csproj -c Release --no-restore /p:NET10=true
 
       - name: Publish plugin
-        run: dotnet publish Jellyfin.Plugin.Sraosha/Jellyfin.Plugin.Sraosha.csproj -c Release -o ./publish --no-build
+        run: dotnet publish Jellyfin.Plugin.Sraosha/Jellyfin.Plugin.Sraosha.csproj -c Release -o ./publish --no-build /p:NET10=true
 
       - name: Extract version from tag or csproj
         id: version
@@ -102,7 +103,7 @@ jobs:
           new_versions = []
 
           # Build fresh version entries — one per supported ABI
-          for abi in ["10.10.0.0", "10.9.0.0"]:
+          for abi in ["12.0.0.0", "10.10.0.0", "10.9.0.0"]:
               new_versions.append({
                   "version": "${VERSION}",
                   "changelog": entry["versions"][0]["changelog"] if entry.get("versions") else "Release ${VERSION}.",
