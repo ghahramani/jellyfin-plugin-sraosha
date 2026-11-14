@@ -1,0 +1,121 @@
+name: Release Plugin
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g. 1.0.0.0)'
+        required: true
+        default: '1.0.0.0'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Extract version
+      id: get_version
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          VERSION="${{ github.event.inputs.version }}"
+        else
+          VERSION="${GITHUB_REF#refs/tags/v}"
+        fi
+        echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+
+    - name: Build plugin
+      run: |
+        dotnet build Jellyfin.Plugin.Sraosha/Jellyfin.Plugin.Sraosha.csproj -c Release
+
+    - name: Package release ZIP
+      id: package
+      run: |
+        VERSION="${{ steps.get_version.outputs.VERSION }}"
+        PKG_DIR="package_tmp"
+        mkdir -p "${PKG_DIR}"
+        cp Jellyfin.Plugin.Sraosha/bin/Release/net8.0/Jellyfin.Plugin.Sraosha.dll "${PKG_DIR}/"
+        cp Jellyfin.Plugin.Sraosha/meta.json "${PKG_DIR}/"
+        cp Jellyfin.Plugin.Sraosha/icon.png "${PKG_DIR}/"
+        
+        ZIP_NAME="Jellyfin.Plugin.Sraosha_${VERSION}.zip"
+        (cd "${PKG_DIR}" && zip -r "../${ZIP_NAME}" ./*)
+        
+        MD5=$(md5sum "${ZIP_NAME}" | awk '{print $1}')
+        echo "MD5=${MD5}" >> $GITHUB_OUTPUT
+        echo "ZIP_NAME=${ZIP_NAME}" >> $GITHUB_OUTPUT
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        name: "Release v${{ steps.get_version.outputs.VERSION }}"
+        files: "${{ steps.package.outputs.ZIP_NAME }}"
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Update manifest.json
+      run: |
+        VERSION="${{ steps.get_version.outputs.VERSION }}"
+        MD5="${{ steps.package.outputs.MD5 }}"
+        TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+        REPO_NAME="${{ github.repository }}"
+        
+        cat << EOF > update_manifest.py
+        import json, sys
+        with open("manifest.json", "r") as f:
+            manifest = json.load(f)
+        
+        new_version_entry_12 = {
+            "version": "${VERSION}",
+            "changelog": f"Release v{VERSION}",
+            "targetAbi": "12.0.0.0",
+            "sourceUrl": f"https://github.com/{REPO_NAME}/releases/download/v{VERSION}/Jellyfin.Plugin.Sraosha_{VERSION}.zip",
+            "checksum": "${MD5}",
+            "timestamp": "${TIMESTAMP}"
+        }
+        new_version_entry_10 = {
+            "version": "${VERSION}",
+            "changelog": f"Release v{VERSION}",
+            "targetAbi": "10.10.0.0",
+            "sourceUrl": f"https://github.com/{REPO_NAME}/releases/download/v{VERSION}/Jellyfin.Plugin.Sraosha_{VERSION}.zip",
+            "checksum": "${MD5}",
+            "timestamp": "${TIMESTAMP}"
+        }
+        
+        # Prepend new entries
+        manifest[0]["versions"] = [new_version_entry_12, new_version_entry_10] + [v for v in manifest[0]["versions"] if v.get("version") != "${VERSION}"]
+        
+        with open("manifest.json", "w") as f:
+            json.dump(manifest, f, indent=2)
+        EOF
+        
+        python3 update_manifest.py
+        rm update_manifest.py
+
+    - name: Commit and push updated manifest
+      run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        git add manifest.json
+        git diff-index --quiet HEAD || git commit -m "chore(manifest): update manifest for v${{ steps.get_version.outputs.VERSION }}"
+        git push origin HEAD:main
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,15 @@
+{
+  "category": "General",
+  "changelog": "Initial release of Sraosha - The Sleepless Sentinel for Jellyfin",
+  "description": "The sleepless sentinel for Jellyfin. Vigilantly inspects Jellyseerr requests and re-triggers missing or stalled downloads in Radarr & Sonarr.",
+  "guid": "593b0f99-5be9-448c-8a45-3b8412d9c132",
+  "name": "Sraosha",
+  "overview": "Automated watchdog that monitors Jellyseerr for stalled requests and re-triggers downloads in Radarr and Sonarr.",
+  "owner": "Navid",
+  "targetAbi": "10.10.0.0",
+  "timestamp": "2026-11-14T04:00:00.0000000Z",
+  "version": "1.0.0.0",
+  "status": "Active",
+  "autoUpdate": false,
+  "assemblies": []
+}

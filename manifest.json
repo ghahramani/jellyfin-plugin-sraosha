@@ -1,0 +1,37 @@
+[
+  {
+    "guid": "593b0f99-5be9-448c-8a45-3b8412d9c132",
+    "name": "Sraosha",
+    "description": "The sleepless sentinel for Jellyfin. Vigilantly inspects Jellyseerr requests and re-triggers missing or stalled downloads in Radarr & Sonarr.",
+    "overview": "Automated watchdog that monitors Jellyseerr for stalled requests and re-triggers downloads in Radarr and Sonarr.",
+    "owner": "ghahramani",
+    "category": "General",
+    "imageUrl": "https://raw.githubusercontent.com/ghahramani/jellyfin-plugin-sraosha/main/Jellyfin.Plugin.Sraosha/icon.png",
+    "versions": [
+      {
+        "version": "1.0.0.0",
+        "changelog": "Initial release of Sraosha: automated watchdog for Jellyseerr requests with multi-instance Radarr/Sonarr support, optional Trakt watch-history filtering, and scheduled task integration.",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/ghahramani/jellyfin-plugin-sraosha/releases/download/v1.0.0.0/Jellyfin.Plugin.Sraosha_1.0.0.0.zip",
+        "checksum": "7767ba6e905e6071bfb71731e3cad072",
+        "timestamp": "2026-11-14T04:00:00Z"
+      },
+      {
+        "version": "1.0.0.0",
+        "changelog": "Initial release of Sraosha: automated watchdog for Jellyseerr requests with multi-instance Radarr/Sonarr support, optional Trakt watch-history filtering, and scheduled task integration.",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/ghahramani/jellyfin-plugin-sraosha/releases/download/v1.0.0.0/Jellyfin.Plugin.Sraosha_1.0.0.0.zip",
+        "checksum": "7767ba6e905e6071bfb71731e3cad072",
+        "timestamp": "2026-11-14T04:00:00Z"
+      },
+      {
+        "version": "1.0.0.0",
+        "changelog": "Initial release of Sraosha: automated watchdog for Jellyseerr requests with multi-instance Radarr/Sonarr support, optional Trakt watch-history filtering, and scheduled task integration.",
+        "targetAbi": "10.10.0.0",
+        "sourceUrl": "https://github.com/ghahramani/jellyfin-plugin-sraosha/releases/download/v1.0.0.0/Jellyfin.Plugin.Sraosha_1.0.0.0.zip",
+        "checksum": "7767ba6e905e6071bfb71731e3cad072",
+        "timestamp": "2026-11-14T04:00:00Z"
+      }
+    ]
+  }
+]

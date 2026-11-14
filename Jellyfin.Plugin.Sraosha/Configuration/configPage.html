@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Sraosha Configuration</title>
+</head>
+<body>
+    <div id="SraoshaConfigPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-checkbox,emby-select">
+        <style>
+            .sraosha-container {
+                max-width: 900px;
+                margin: 0 auto;
+                padding-bottom: 50px;
+            }
+            .sraosha-header {
+                display: flex;
+                align-items: center;
+                gap: 16px;
+                margin-bottom: 24px;
+                padding-bottom: 16px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            }
+            .sraosha-title {
+                font-size: 1.8rem;
+                font-weight: 700;
+                margin: 0;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            .sraosha-subtitle {
+                color: #aaa;
+                font-size: 0.95rem;
+                margin-top: 4px;
+            }
+            .sraosha-card {
+                background: rgba(255, 255, 255, 0.04);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 8px;
+                padding: 20px;
+                margin-bottom: 24px;
+            }
+            .sraosha-card-title {
+                font-size: 1.2rem;
+                font-weight: 600;
+                margin-top: 0;
+                margin-bottom: 16px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .sraosha-input-group {
+                margin-bottom: 16px;
+            }
+            .sraosha-instances-list {
+                display: flex;
+                flex-direction: column;
+                gap: 14px;
+                margin-bottom: 16px;
+            }
+            .sraosha-instance-row {
+                background: rgba(0, 0, 0, 0.25);
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                border-radius: 6px;
+                padding: 14px;
+                display: grid;
+                grid-template-columns: 1fr 1.5fr 1.5fr auto auto;
+                gap: 10px;
+                align-items: center;
+            }
+            @media (max-width: 768px) {
+                .sraosha-instance-row {
+                    grid-template-columns: 1fr;
+                }
+            }
+            .sraosha-btn {
+                cursor: pointer;
+                border-radius: 4px;
+                padding: 8px 16px;
+                font-weight: 600;
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+            }
+            .sraosha-btn-secondary {
+                background: rgba(255, 255, 255, 0.1);
+                color: #fff;
+                border: 1px solid rgba(255, 255, 255, 0.15);
+            }
+            .sraosha-btn-secondary:hover {
+                background: rgba(255, 255, 255, 0.2);
+            }
+            .sraosha-btn-danger {
+                background: rgba(255, 75, 75, 0.2);
+                color: #ff6b6b;
+                border: 1px solid rgba(255, 75, 75, 0.3);
+            }
+            .sraosha-btn-danger:hover {
+                background: rgba(255, 75, 75, 0.35);
+            }
+            .sraosha-badge {
+                display: inline-block;
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 0.85rem;
+                font-weight: 600;
+            }
+            .sraosha-badge-success {
+                background: rgba(46, 204, 113, 0.2);
+                color: #2ecc71;
+                border: 1px solid rgba(46, 204, 113, 0.3);
+            }
+            .sraosha-badge-error {
+                background: rgba(231, 76, 60, 0.2);
+                color: #e74c3c;
+                border: 1px solid rgba(231, 76, 60, 0.3);
+            }
+            .sraosha-status-box {
+                background: rgba(0, 0, 0, 0.3);
+                border-radius: 6px;
+                padding: 14px;
+                margin-top: 10px;
+                font-family: monospace;
+                font-size: 0.9rem;
+            }
+        </style>
+
+        <div data-role="content">
+            <div class="content-primary sraosha-container">
+                <div class="sraosha-header">
+                    <div>
+                        <h1 class="sraosha-title">🛡️ Sraosha Sentinel</h1>
+                        <div class="sraosha-subtitle">The sleepless watcher for Jellyfin • Automatically monitors Jellyseerr requests and revives stalled downloads in Radarr &amp; Sonarr</div>
+                    </div>
+                </div>
+
+                <form id="sraoshaForm">
+                    <!-- Status & Manual Trigger Card -->
+                    <div class="sraosha-card">
+                        <h2 class="sraosha-card-title">📊 Sentinel Status &amp; Manual Run</h2>
+                        <p style="margin-top: 0; color: #aaa;">
+                            Sraosha automatically runs every 6 hours via Jellyfin's <b>Scheduled Tasks</b>. You can also trigger an immediate scan below.
+                        </p>
+                        <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 12px;">
+                            <button is="emby-button" type="button" class="raised button-submit" id="btnRunScanNow">
+                                <span>▶ Run Scan Now</span>
+                            </button>
+                            <span id="scanStatusIndicator" style="display: none; color: #00a4dc;">Scanning library pipelines...</span>
+                        </div>
+                        <div id="lastRunContainer" class="sraosha-status-box">
+                            <span id="lastRunText">Loading last scan status...</span>
+                        </div>
+                    </div>
+
+                    <!-- General Settings -->
+                    <div class="sraosha-card">
+                        <h2 class="sraosha-card-title">⚙️ General Settings</h2>
+                        
+                        <div class="sraosha-input-group">
+                            <div class="inputContainer">
+                                <label class="inputLabel inputLabelUnfocused" for="numStaleHours">Stale Request Threshold (Hours)</label>
+                                <input is="emby-input" type="number" id="numStaleHours" min="1" max="168" value="2" />
+                                <div class="fieldDescription">Only requests in "Processing" status older than this threshold will be evaluated. Prevents re-triggering downloads that just started.</div>
+                            </div>
+                        </div>
+
+                        <div class="sraosha-input-group">
+                            <label class="checkboxContainer">
+                                <input is="emby-checkbox" type="checkbox" id="chkDryRun" />
+                                <span>Dry Run Mode (Log actions without actually sending search commands to Radarr/Sonarr)</span>
+                            </label>
+                        </div>
+
+                        <div class="sraosha-input-group" style="margin-top: 16px;">
+                            <label class="checkboxContainer">
+                                <input is="emby-checkbox" type="checkbox" id="chkWebhookEnabled" />
+                                <span>Enable Webhook Notifications (Discord, Slack, ntfy)</span>
+                            </label>
+                        </div>
+
+                        <div class="sraosha-input-group" id="webhookUrlGroup" style="margin-left: 28px;">
+                            <div class="inputContainer">
+                                <label class="inputLabel inputLabelUnfocused" for="txtWebhookUrl">Webhook URL</label>
+                                <input is="emby-input" type="url" id="txtWebhookUrl" placeholder="https://discord.com/api/webhooks/..." />
+                                <div class="fieldDescription">Receives rich embeds when Sraosha re-triggers missing media.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Jellyseerr / Overseerr Settings -->
+                    <div class="sraosha-card">
+                        <h2 class="sraosha-card-title">🍿 Jellyseerr / Overseerr</h2>
+                        <div class="sraosha-input-group">
+                            <div class="inputContainer">
+                                <label class="inputLabel inputLabelUnfocused" for="txtJellyseerrUrl">Jellyseerr Base URL</label>
+                                <input is="emby-input" type="url" id="txtJellyseerrUrl" required placeholder="http://192.168.1.10:5055" />
+                            </div>
+                        </div>
+                        <div class="sraosha-input-group">
+                            <div class="inputContainer">
+                                <label class="inputLabel inputLabelUnfocused" for="txtJellyseerrApiKey">Jellyseerr API Key</label>
+                                <input is="emby-input" type="password" id="txtJellyseerrApiKey" required />
+                                <div class="fieldDescription">Found in Jellyseerr → Settings → General → API Key</div>
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <button type="button" class="sraosha-btn sraosha-btn-secondary" id="btnTestJellyseerr">⚡ Test Connection</button>
+                            <span id="testResultJellyseerr" style="display:none;"></span>
+                        </div>
+                    </div>
+
+                    <!-- Radarr Instances -->
+                    <div class="sraosha-card">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <h2 class="sraosha-card-title" style="margin: 0;">🎬 Radarr Instances (Movies)</h2>
+                            <button type="button" class="sraosha-btn sraosha-btn-secondary" id="btnAddRadarr">+ Add Instance</button>
+                        </div>
+                        <p style="margin-top: 0; color: #aaa; font-size: 0.9rem;">
+                            Supports multiple instances (e.g. Standard 1080p, 4K, Anime).
+                        </p>
+                        <div id="radarrList" class="sraosha-instances-list"></div>
+                    </div>
+
+                    <!-- Sonarr Instances -->
+                    <div class="sraosha-card">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <h2 class="sraosha-card-title" style="margin: 0;">📺 Sonarr Instances (TV Series)</h2>
+                            <button type="button" class="sraosha-btn sraosha-btn-secondary" id="btnAddSonarr">+ Add Instance</button>
+                        </div>
+                        <p style="margin-top: 0; color: #aaa; font-size: 0.9rem;">
+                            Supports multiple instances (e.g. Standard, 4K, Anime).
+                        </p>
+                        <div id="sonarrList" class="sraosha-instances-list"></div>
+                    </div>
+
+                    <!-- Trakt Integration -->
+                    <div class="sraosha-card">
+                        <h2 class="sraosha-card-title">🧭 Trakt Integration (Optional)</h2>
+                        <p style="margin-top: 0; color: #aaa; font-size: 0.9rem;">
+                            If you watched a movie or episode and intentionally deleted it, Trakt watch history prevents Sraosha from re-downloading it.
+                        </p>
+                        <div class="sraosha-input-group">
+                            <label class="checkboxContainer">
+                                <input is="emby-checkbox" type="checkbox" id="chkEnableTrakt" />
+                                <span>Enable Trakt Integration</span>
+                            </label>
+                        </div>
+                        <div id="traktDetailsGroup" style="margin-left: 28px;">
+                            <div class="sraosha-input-group">
+                                <div class="inputContainer">
+                                    <label class="inputLabel inputLabelUnfocused" for="txtTraktClientId">Trakt Client ID</label>
+                                    <input is="emby-input" type="text" id="txtTraktClientId" placeholder="Created in trakt.tv/oauth/applications" />
+                                </div>
+                            </div>
+                            <div class="sraosha-input-group">
+                                <div class="inputContainer">
+                                    <label class="inputLabel inputLabelUnfocused" for="txtTraktUsername">Trakt Username</label>
+                                    <input is="emby-input" type="text" id="txtTraktUsername" />
+                                </div>
+                            </div>
+                            <div class="sraosha-input-group">
+                                <label class="checkboxContainer">
+                                    <input is="emby-checkbox" type="checkbox" id="chkTraktSkipWatched" />
+                                    <span>Skip items marked as watched on Trakt</span>
+                                </label>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 12px; margin-top: 12px;">
+                                <button type="button" class="sraosha-btn sraosha-btn-secondary" id="btnTestTrakt">⚡ Test Trakt Connection</button>
+                                <span id="testResultTrakt" style="display:none;"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Save Button -->
+                    <div style="margin-top: 24px;">
+                        <button is="emby-button" type="submit" class="raised button-submit block">
+                            <span>Save Sraosha Configuration</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <script type="text/javascript">
+            (function () {
+                var pluginId = "593b0f99-5be9-448c-8a45-3b8412d9c132";
+
+                var radarrInstances = [];
+                var sonarrInstances = [];
+
+                function renderRadarrInstances(container) {
+                    container.innerHTML = "";
+                    if (radarrInstances.length === 0) {
+                        container.innerHTML = '<div style="color: #888; font-style: italic;">No Radarr instances configured. Click "+ Add Instance" above.</div>';
+                        return;
+                    }
+
+                    radarrInstances.forEach(function (inst, index) {
+                        var row = document.createElement("div");
+                        row.className = "sraosha-instance-row";
+                        row.innerHTML = 
+                            '<input is="emby-input" type="text" placeholder="Instance Name" class="txt-name" value="' + escapeHtml(inst.Name || "") + '" />' +
+                            '<input is="emby-input" type="url" placeholder="URL (http://...:7878)" class="txt-url" value="' + escapeHtml(inst.Url || "") + '" />' +
+                            '<input is="emby-input" type="password" placeholder="API Key" class="txt-key" value="' + escapeHtml(inst.ApiKey || "") + '" />' +
+                            '<button type="button" class="sraosha-btn sraosha-btn-secondary btn-test-inst">Test</button>' +
+                            '<button type="button" class="sraosha-btn sraosha-btn-danger btn-remove-inst">✕</button>';
+
+                        row.querySelector(".txt-name").oninput = function () { inst.Name = this.value; };
+                        row.querySelector(".txt-url").oninput = function () { inst.Url = this.value; };
+                        row.querySelector(".txt-key").oninput = function () { inst.ApiKey = this.value; };
+
+                        row.querySelector(".btn-remove-inst").onclick = function () {
+                            radarrInstances.splice(index, 1);
+                            renderRadarrInstances(container);
+                        };
+
+                        row.querySelector(".btn-test-inst").onclick = function () {
+                            testRadarr(inst, this);
+                        };
+
+                        container.appendChild(row);
+                    });
+                }
+
+                function renderSonarrInstances(container) {
+                    container.innerHTML = "";
+                    if (sonarrInstances.length === 0) {
+                        container.innerHTML = '<div style="color: #888; font-style: italic;">No Sonarr instances configured. Click "+ Add Instance" above.</div>';
+                        return;
+                    }
+
+                    sonarrInstances.forEach(function (inst, index) {
+                        var row = document.createElement("div");
+                        row.className = "sraosha-instance-row";
+                        row.innerHTML = 
+                            '<input is="emby-input" type="text" placeholder="Instance Name" class="txt-name" value="' + escapeHtml(inst.Name || "") + '" />' +
+                            '<input is="emby-input" type="url" placeholder="URL (http://...:8989)" class="txt-url" value="' + escapeHtml(inst.Url || "") + '" />' +
+                            '<input is="emby-input" type="password" placeholder="API Key" class="txt-key" value="' + escapeHtml(inst.ApiKey || "") + '" />' +
+                            '<button type="button" class="sraosha-btn sraosha-btn-secondary btn-test-inst">Test</button>' +
+                            '<button type="button" class="sraosha-btn sraosha-btn-danger btn-remove-inst">✕</button>';
+
+                        row.querySelector(".txt-name").oninput = function () { inst.Name = this.value; };
+                        row.querySelector(".txt-url").oninput = function () { inst.Url = this.value; };
+                        row.querySelector(".txt-key").oninput = function () { inst.ApiKey = this.value; };
+
+                        row.querySelector(".btn-remove-inst").onclick = function () {
+                            sonarrInstances.splice(index, 1);
+                            renderSonarrInstances(container);
+                        };
+
+                        row.querySelector(".btn-test-inst").onclick = function () {
+                            testSonarr(inst, this);
+                        };
+
+                        container.appendChild(row);
+                    });
+                }
+
+                function escapeHtml(text) {
+                    return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+                }
+
+                function loadConfig(page) {
+                    Dashboard.showLoadingMsg();
+                    ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                        page.querySelector("#txtJellyseerrUrl").value = config.JellyseerrUrl || "";
+                        page.querySelector("#txtJellyseerrApiKey").value = config.JellyseerrApiKey || "";
+                        page.querySelector("#numStaleHours").value = config.StaleAfterHours || 2;
+                        page.querySelector("#chkDryRun").checked = config.DryRun || false;
+                        page.querySelector("#chkWebhookEnabled").checked = config.WebhookEnabled || false;
+                        page.querySelector("#txtWebhookUrl").value = config.WebhookUrl || "";
+
+                        page.querySelector("#chkEnableTrakt").checked = config.EnableTrakt || false;
+                        page.querySelector("#txtTraktClientId").value = config.TraktClientId || "";
+                        page.querySelector("#txtTraktUsername").value = config.TraktUsername || "";
+                        page.querySelector("#chkTraktSkipWatched").checked = config.TraktSkipWatched !== false;
+
+                        radarrInstances = config.RadarrInstances || [];
+                        sonarrInstances = config.SonarrInstances || [];
+
+                        renderRadarrInstances(page.querySelector("#radarrList"));
+                        renderSonarrInstances(page.querySelector("#sonarrList"));
+
+                        loadLastRun(page);
+                        Dashboard.hideLoadingMsg();
+                    }).catch(function (err) {
+                        Dashboard.hideLoadingMsg();
+                        Dashboard.alert("Error loading Sraosha configuration: " + err);
+                    });
+                }
+
+                function loadLastRun(page) {
+                    ApiClient.ajax({
+                        type: "GET",
+                        url: ApiClient.getUrl("Sraosha/LastRun"),
+                        dataType: "json"
+                    }).then(function (data) {
+                        var container = page.querySelector("#lastRunText");
+                        if (!data) {
+                            container.textContent = "No scans have executed yet.";
+                            return;
+                        }
+
+                        var dateStr = new Date(data.Timestamp).toLocaleString();
+                        var summaryText = "Last Scan: " + dateStr + "\n" +
+                            "Status: " + (data.IsSuccess ? "Success" : "Error (" + data.ErrorMessage + ")") + "\n" +
+                            "Stalled Requests: " + data.StalledRequestsCount + "\n" +
+                            "Movies Triggered: " + data.MoviesTriggered + " (Skipped: " + data.MoviesSkipped + ")\n" +
+                            "Shows Triggered: " + data.ShowsTriggered + " (" + data.EpisodesTriggered + " episodes) (Skipped: " + data.ShowsSkipped + ")";
+
+                        if (data.TriggeredItems && data.TriggeredItems.length > 0) {
+                            summaryText += "\n\nRe-triggered items:\n" + data.TriggeredItems.join("\n");
+                        }
+
+                        container.textContent = summaryText;
+                    }).catch(function () {
+                        page.querySelector("#lastRunText").textContent = "Unable to fetch last scan details.";
+                    });
+                }
+
+                function saveConfig(page) {
+                    Dashboard.showLoadingMsg();
+                    ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                        config.JellyseerrUrl = page.querySelector("#txtJellyseerrUrl").value;
+                        config.JellyseerrApiKey = page.querySelector("#txtJellyseerrApiKey").value;
+                        config.StaleAfterHours = parseInt(page.querySelector("#numStaleHours").value, 10) || 2;
+                        config.DryRun = page.querySelector("#chkDryRun").checked;
+                        config.WebhookEnabled = page.querySelector("#chkWebhookEnabled").checked;
+                        config.WebhookUrl = page.querySelector("#txtWebhookUrl").value;
+
+                        config.EnableTrakt = page.querySelector("#chkEnableTrakt").checked;
+                        config.TraktClientId = page.querySelector("#txtTraktClientId").value;
+                        config.TraktUsername = page.querySelector("#txtTraktUsername").value;
+                        config.TraktSkipWatched = page.querySelector("#chkTraktSkipWatched").checked;
+
+                        config.RadarrInstances = radarrInstances;
+                        config.SonarrInstances = sonarrInstances;
+
+                        return ApiClient.updatePluginConfiguration(pluginId, config);
+                    }).then(function () {
+                        Dashboard.hideLoadingMsg();
+                        Dashboard.alert("Sraosha Sentinel configuration saved!");
+                    }).catch(function (err) {
+                        Dashboard.hideLoadingMsg();
+                        Dashboard.alert("Error saving configuration: " + err);
+                    });
+                }
+
+                function testJellyseerr(page) {
+                    var el = page.querySelector("#testResultJellyseerr");
+                    el.className = "sraosha-badge";
+                    el.style.display = "inline-block";
+                    el.textContent = "Testing...";
+
+                    var url = page.querySelector("#txtJellyseerrUrl").value;
+                    var key = page.querySelector("#txtJellyseerrApiKey").value;
+
+                    ApiClient.ajax({
+                        type: "POST",
+                        url: ApiClient.getUrl("Sraosha/TestJellyseerr", { url: url, apiKey: key }),
+                        dataType: "json"
+                    }).then(function (res) {
+                        if (res && res.success) {
+                            el.className = "sraosha-badge sraosha-badge-success";
+                            el.textContent = "✓ Connected";
+                        } else {
+                            el.className = "sraosha-badge sraosha-badge-error";
+                            el.textContent = "✗ " + (res ? res.message : "Failed");
+                        }
+                    }).catch(function (err) {
+                        el.className = "sraosha-badge sraosha-badge-error";
+                        el.textContent = "✗ " + err;
+                    });
+                }
+
+                function testRadarr(inst, btn) {
+                    var origText = btn.textContent;
+                    btn.textContent = "...";
+                    ApiClient.ajax({
+                        type: "POST",
+                        url: ApiClient.getUrl("Sraosha/TestRadarr", { url: inst.Url, apiKey: inst.ApiKey, name: inst.Name }),
+                        dataType: "json"
+                    }).then(function (res) {
+                        btn.textContent = res && res.success ? "✓ OK" : "✗ Error";
+                        setTimeout(function () { btn.textContent = origText; }, 3000);
+                    }).catch(function () {
+                        btn.textContent = "✗ Error";
+                        setTimeout(function () { btn.textContent = origText; }, 3000);
+                    });
+                }
+
+                function testSonarr(inst, btn) {
+                    var origText = btn.textContent;
+                    btn.textContent = "...";
+                    ApiClient.ajax({
+                        type: "POST",
+                        url: ApiClient.getUrl("Sraosha/TestSonarr", { url: inst.Url, apiKey: inst.ApiKey, name: inst.Name }),
+                        dataType: "json"
+                    }).then(function (res) {
+                        btn.textContent = res && res.success ? "✓ OK" : "✗ Error";
+                        setTimeout(function () { btn.textContent = origText; }, 3000);
+                    }).catch(function () {
+                        btn.textContent = "✗ Error";
+                        setTimeout(function () { btn.textContent = origText; }, 3000);
+                    });
+                }
+
+                function testTrakt(page) {
+                    var el = page.querySelector("#testResultTrakt");
+                    el.className = "sraosha-badge";
+                    el.style.display = "inline-block";
+                    el.textContent = "Testing...";
+
+                    var clientId = page.querySelector("#txtTraktClientId").value;
+                    var username = page.querySelector("#txtTraktUsername").value;
+
+                    ApiClient.ajax({
+                        type: "POST",
+                        url: ApiClient.getUrl("Sraosha/TestTrakt", { clientId: clientId, username: username }),
+                        dataType: "json"
+                    }).then(function (res) {
+                        if (res && res.success) {
+                            el.className = "sraosha-badge sraosha-badge-success";
+                            el.textContent = "✓ Connected";
+                        } else {
+                            el.className = "sraosha-badge sraosha-badge-error";
+                            el.textContent = "✗ " + (res ? res.message : "Failed");
+                        }
+                    }).catch(function (err) {
+                        el.className = "sraosha-badge sraosha-badge-error";
+                        el.textContent = "✗ " + err;
+                    });
+                }
+
+                function triggerManualScan(page) {
+                    var indicator = page.querySelector("#scanStatusIndicator");
+                    var btn = page.querySelector("#btnRunScanNow");
+                    indicator.style.display = "inline";
+                    btn.disabled = true;
+
+                    ApiClient.ajax({
+                        type: "POST",
+                        url: ApiClient.getUrl("Sraosha/RunCheck"),
+                        dataType: "json"
+                    }).then(function (summary) {
+                        indicator.style.display = "none";
+                        btn.disabled = false;
+                        loadLastRun(page);
+                        Dashboard.alert("Sraosha scan complete! Re-triggered " + summary.MoviesTriggered + " movies and " + summary.EpisodesTriggered + " episodes.");
+                    }).catch(function (err) {
+                        indicator.style.display = "none";
+                        btn.disabled = false;
+                        Dashboard.alert("Error running scan: " + err);
+                    });
+                }
+
+                document.querySelector("#SraoshaConfigPage").addEventListener("pageshow", function () {
+                    var page = this;
+                    loadConfig(page);
+
+                    page.querySelector("#sraoshaForm").onsubmit = function (e) {
+                        e.preventDefault();
+                        saveConfig(page);
+                        return false;
+                    };
+
+                    page.querySelector("#btnAddRadarr").onclick = function () {
+                        radarrInstances.push({
+                            Name: "Radarr " + (radarrInstances.length + 1),
+                            Url: "http://localhost:7878",
+                            ApiKey: "",
+                            Enabled: true
+                        });
+                        renderRadarrInstances(page.querySelector("#radarrList"));
+                    };
+
+                    page.querySelector("#btnAddSonarr").onclick = function () {
+                        sonarrInstances.push({
+                            Name: "Sonarr " + (sonarrInstances.length + 1),
+                            Url: "http://localhost:8989",
+                            ApiKey: "",
+                            Enabled: true
+                        });
+                        renderSonarrInstances(page.querySelector("#sonarrList"));
+                    };
+
+                    page.querySelector("#btnTestJellyseerr").onclick = function () {
+                        testJellyseerr(page);
+                    };
+
+                    page.querySelector("#btnTestTrakt").onclick = function () {
+                        testTrakt(page);
+                    };
+
+                    page.querySelector("#btnRunScanNow").onclick = function () {
+                        triggerManualScan(page);
+                    };
+                });
+            })();
+        </script>
+    </div>
+</body>
+</html>
