@@ -61,7 +61,9 @@ jobs:
           cp Jellyfin.Plugin.Sraosha/icon.png "$PKG_DIR/"
 
           ZIP_NAME="Jellyfin.Plugin.Sraosha_${VERSION}.zip"
-          (cd "$PKG_DIR" && zip -9 -r "$GITHUB_WORKSPACE/dist/$ZIP_NAME" ./*)
+          # Normalize timestamps and strip attributes for deterministic zip hash
+          find "$PKG_DIR" -exec touch -t 202601010000.00 {} +
+          (cd "$PKG_DIR" && zip -X -9 -r "$GITHUB_WORKSPACE/dist/$ZIP_NAME" ./*)
           rm -rf "$PKG_DIR"
 
           MD5_SUM=$(md5sum "dist/$ZIP_NAME" | awk '{print $1}')
